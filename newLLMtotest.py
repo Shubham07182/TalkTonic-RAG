@@ -20,13 +20,10 @@ load_dotenv()
 
 st.set_page_config(page_title="TalkTonic", layout="centered")
 
-# ---------------------------------------------------------------------------
-# Config
-# ---------------------------------------------------------------------------
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-SIMILARITY_THRESHOLD = 0.25   # cosine similarity cutoff for retrieved chunks
-MAX_PROMPT_WORDS = 2000       # consistent word-based context budget
-MAX_HISTORY_TURNS = 6         # number of prior (user, bot) turns sent to the LLM
+SIMILARITY_THRESHOLD = 0.25
+MAX_PROMPT_WORDS = 2000
+MAX_HISTORY_TURNS = 6
 
 SYSTEM_PROMPT = (
     "You are a document assistant. Answer questions using ONLY the provided "
@@ -44,9 +41,6 @@ def get_embed_model():
 embed_model = get_embed_model()
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 def normalize_vector(vec):
     norm = np.linalg.norm(vec)
     if norm == 0:
@@ -56,7 +50,6 @@ def normalize_vector(vec):
 
 def retrieve_relevant_chunks_faiss(query, faiss_index, chunk_map, top_k=4,
                                     threshold=SIMILARITY_THRESHOLD):
-    """Retrieve top-k chunks, filtering out low-similarity matches."""
     query_vec = embed_model.encode([query])[0]
     query_vec = normalize_vector(query_vec).astype("float32")
 
@@ -117,7 +110,6 @@ def extract_text_from_file(uploaded_file):
 
 
 def truncate_prompt(text, max_words=MAX_PROMPT_WORDS):
-    """Consistent word-based truncation (avoids char/word mismatch bug)."""
     words = text.split()
     if len(words) <= max_words:
         return text
@@ -125,7 +117,6 @@ def truncate_prompt(text, max_words=MAX_PROMPT_WORDS):
 
 
 def build_messages(prompt, history, max_turns=MAX_HISTORY_TURNS):
-    """Build the message list for Groq, including system prompt + recent history."""
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
     recent = history[-(max_turns * 2):] if history else []
@@ -183,9 +174,6 @@ def get_theme_colors(theme):
     return themes.get(theme, themes["Dark"])
 
 
-# ---------------------------------------------------------------------------
-# Session state
-# ---------------------------------------------------------------------------
 for key, default in {
     "last_file_hash": None,
     "messages": [],
@@ -206,9 +194,6 @@ if not GROQ_API_KEY:
     st.stop()
 
 
-# ---------------------------------------------------------------------------
-# File upload
-# ---------------------------------------------------------------------------
 uploaded_file = st.file_uploader("Upload a PDF, Image, or Text File", type=["pdf", "png", "jpg", "jpeg", "txt", "docx"])
 if uploaded_file:
     file_hash = get_file_hash(uploaded_file)
@@ -226,7 +211,6 @@ if uploaded_file:
             st.session_state.faiss_index = faiss.IndexFlatIP(dimension)
             st.session_state.faiss_index.add(embeddings)
 
-            # Store metadata alongside each chunk (source file + chunk id)
             st.session_state.chunk_map = {
                 i: {"text": chunk, "source": uploaded_file.name, "chunk_id": i}
                 for i, chunk in enumerate(chunks)
@@ -268,9 +252,6 @@ with st.container():
             gc.collect()
 
 
-# ---------------------------------------------------------------------------
-# Initial "ask about this file" box
-# ---------------------------------------------------------------------------
 if st.session_state.show_summary_input and st.session_state.faiss_index:
     query = st.text_input("Ask something about this file:", placeholder="E.g. Summarize this document", key="summary_input")
     if st.button("Send to Bot"):
@@ -284,8 +265,6 @@ if st.session_state.show_summary_input and st.session_state.faiss_index:
             prompt = f"Context:\n{context}\n\nUser Query: {query}\n\nAnswer:"
             st.session_state.messages.append(("user", query))
         else:
-            # Evenly sample chunks across the document instead of only the first 5,
-            # and label this honestly — it is a sample, not the full document.
             all_chunks = list(st.session_state.chunk_map.values())
             sample_size = min(5, len(all_chunks))
             if sample_size > 0:
@@ -305,9 +284,6 @@ if st.session_state.show_summary_input and st.session_state.faiss_index:
         st.session_state.show_summary_input = False
 
 
-# ---------------------------------------------------------------------------
-# Chat input
-# ---------------------------------------------------------------------------
 user_input = st.chat_input("Type your message...")
 if user_input:
     st.session_state.pending_input = user_input.strip()
@@ -335,9 +311,6 @@ if st.session_state.pending_input:
     st.session_state.pending_input = ""
 
 
-# ---------------------------------------------------------------------------
-# Render chat
-# ---------------------------------------------------------------------------
 chat_html = """<div id="chatbox" class="chat-container">"""
 for sender, msg in st.session_state.messages:
     chat_html += f'<div class="{sender}-message">{html.escape(msg)}</div>'
