@@ -16,8 +16,9 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 import gc
 
-st.set_page_config(page_title="TalkTonic", layout="centered")
 
+st.set_page_config(page_title="TalkTonic", layout="centered")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 @st.cache_resource(show_spinner=False)
 def get_embed_model():
     return SentenceTransformer("paraphrase-MiniLM-L3-v2")
