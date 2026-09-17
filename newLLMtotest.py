@@ -74,7 +74,7 @@ def call_groq_model(message):
         "Authorization": f"Bearer {GROQ_API_KEY}"
     }
     data = {
-        "model": "llama3-8b-8192",
+        "model": "openai/gpt-oss-120b",
         "messages": [{"role": "user", "content": message}]
     }
     try:
